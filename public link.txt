@@ -1,0 +1,10 @@
+https://calculator.aws/#/estimate?id=382f33e64b1efe728dc6875cfc1667c46bf05c6d
+
+https://calculator.aws/#/estimate?id=36f82b9d3704d007c0918f04eb69c73d050e5108
+
+https://calculator.aws/#/estimate?id=fe9bbaec43c82992e16a9975dde72de62bac35a3
+
+serv 1: ip privada 10.0.1.253
+serv 2: ip privada 10.0.1.202
+
+https://github.com/CristianAntVal85/AWS.git
