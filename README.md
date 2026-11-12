@@ -71,11 +71,11 @@ Creé cada recurso por separado desde la consola. No usé el asistente «VPC y m
 | Gateway de internet | `libreria-igw` | Asociada a `libreria-vpc` |
 | Tabla de rutas | `libreria-rt-publica` | `10.0.0.0/16` → local y `0.0.0.0/0` → `libreria-igw`; asociada a `libreria-publica` |
 
-![VPC](img/vpc.png)
-![Subred pública](img/subred.png)
-![Gateway de internet](img/igw.png)
-![Tabla de rutas: rutas](img/rutas.png)
-![Tabla de rutas: asociación de subred](img/rutas-asociacion.png)
+![VPC](img/1.png)
+![Subred pública](img/2.png)
+![Gateway de internet](img/3.png)
+![Tabla de rutas: rutas](img/4.png)
+![Tabla de rutas: asociación de subred](img/5.png)
 
 **¿Por qué la subred es pública?** Lo que hace pública a una subred no es su nombre, sino su tabla de rutas: `libreria-publica` está asociada a una tabla con una ruta `0.0.0.0/0` hacia la gateway de internet, y además asigna una IP pública a sus instancias. Sin esas dos cosas, los servidores no serían accesibles desde internet. Aquí es necesario porque los visitantes de la librería tienen que llegar al servidor web.
 
@@ -88,7 +88,7 @@ Grupo de seguridad `libreria-web-sg`, dentro de `libreria-vpc`:
 | HTTP | 80 | `0.0.0.0/0` | La web es pública |
 | SSH | 22 | Mi IP (`/32`) | Administración solo desde mi equipo |
 
-![Reglas de entrada del grupo de seguridad](img/sg.png)
+![Reglas de entrada del grupo de seguridad](img/6.png)
 
 **¿Por qué el SSH solo está abierto a mi IP?** SSH sirve para administrar el servidor, no para los visitantes. Si estuviera abierto a todo internet, el puerto 22 recibiría escaneos y ataques de fuerza bruta constantes. Limitarlo a mi IP reduce mucho la superficie de ataque, y solo yo puedo entrar para administrar. HTTP sí queda abierto porque es la función de la web.
 
@@ -106,10 +106,9 @@ Grupo de seguridad `libreria-web-sg`, dentro de `libreria-vpc`:
 
 El script [`scripts/user-data1.sh`](scripts/user-data1.sh) se ejecuta en el primer arranque. Instala nginx, lo activa y publica una página con el horario, la dirección y la recomendación de libro de la librería.
 
-![Instancia libreria-web](img/ec2.png)
-![Etiquetas de la instancia](img/ec2-etiquetas.png)
-![Web funcionando con la IP visible](img/web1.png)
-![Conexión SSH](img/ssh.png)
+![Instancia libreria-web y sus etiquetas](img/8.png)
+![Web del servidor 1 con la IP visible (antes de corregir el pie de página)](img/7.png)
+![Conexión SSH](img/14.png)
 
 **Problemas que encontré y cómo los resolví**
 
@@ -122,11 +121,13 @@ Estimación mensual de un servidor encendido 24/7 en `us-east-1`: **8,23 USD al 
 
 - Estimación EC2: https://calculator.aws/#/estimate?id=382f33e64b1efe728dc6875cfc1667c46bf05c6d
 
-![Estimación de un servidor](img/presupuesto-basico.png)
+![Estimación de un servidor](img/9.png)
 
 **Idea para reducir costes.** La web de Librería Tinta es una página estática, por lo que mantener una instancia EC2 encendida 24/7 es más de lo necesario. En un entorno real la serviría desde Amazon S3 con CloudFront por delante. Según AWS Pricing Calculator, el coste pasaría de 8,23 USD/mes a 0,13 USD/mes. Además, se elimina el cargo por la IPv4 pública, se gana HTTPS gratuito y desaparece el mantenimiento del servidor. Esta solución solo sirve mientras la web sea estática. Si necesitara usuarios o base de datos, haría falta un servidor o una arquitectura distinta. En este proyecto se usa EC2 porque el objetivo es practicar VPC, seguridad y DNS.
 
 - Estimación S3 + CloudFront: https://calculator.aws/#/estimate?id=d0b3f97d996eb3f307420d8bab27ea7306e478e4
+
+![Estimación S3 + CloudFront](img/10.png)
 
 ### B5. Documentación
 
@@ -145,8 +146,8 @@ Lancé `libreria-web-2` en la misma VPC, subred y grupo de seguridad, con [`scri
 | `libreria-web` (servidor 1) | `10.0.1.253` |
 | `libreria-web-2` (servidor 2) | `10.0.1.202` |
 
-![Las dos instancias en ejecución](img/ec2-dos.png)
-![Servidor 2 funcionando](img/web2.png)
+![Las dos instancias en ejecución](img/12.png)
+![Servidor 2 funcionando](img/11.png)
 
 **Configuración DNS.** Antes activé en la VPC la resolución DNS y los nombres de host DNS, que vienen desactivados al crear una VPC a mano. Después creé la zona alojada **privada** `libreria.lab` y la asocié a `libreria-vpc`, para que el nombre solo se resuelva dentro de la red. En la zona hay dos registros A con el mismo nombre, `web.libreria.lab`, e identificadores distintos:
 
@@ -157,8 +158,8 @@ Lancé `libreria-web-2` en la misma VPC, subred y grupo de seguridad, con [`scri
 
 Es un reparto ponderado: de cada 10 consultas, unas 8 devuelven el servidor 1 y unas 2 el servidor 2.
 
-![Opciones DNS de la VPC](img/vpc-dns.png)
-![Zona privada y registros](img/route53-registros.png)
+<!-- ![Opciones DNS de la VPC](img/18.png) -->
+![Zona privada y registros](img/13.png)
 
 **Comprobación.** Desde el servidor 1, conectado por SSH, resolví el nombre con `nslookup` y `dig`, y lancé 30 peticiones con `curl` a `http://web.libreria.lab`:
 
@@ -176,7 +177,7 @@ Resultado: 27 respuestas del servidor 1 y 3 del servidor 2. El reparto no es exa
 
 En la primera prueba salieron 30 de 30 del servidor 1. La causa fue la caché del resolver de la VPC (`10.0.0.2`), que guarda la respuesta durante el TTL. Para la prueba bajé el TTL de 60 a 1 segundo y añadí una pausa de 2 segundos entre peticiones.
 
-![Comprobación de DNS desde el servidor 1](img/comprobacion-dns.png)
+<!-- ![Comprobación de DNS desde el servidor 1](img/19.png) -->
 
 ### M2. Costes con dos servidores y DNS
 
@@ -184,7 +185,7 @@ Con dos instancias EC2 `t3.micro` 24/7, con 8 GB de disco gp3 cada una, más una
 
 - Estimación con dos servidores y DNS: https://calculator.aws/#/estimate?id=fe9bbaec43c82992e16a9975dde72de62bac35a3
 
-![Estimación con dos servidores y Route 53](img/presupuesto-medio.png)
+![Estimación con dos servidores y Route 53](img/15.png)
 
 ---
 
@@ -214,8 +215,8 @@ chmod +x desplegar.sh
 ./desplegar.sh
 ```
 
-![Ejecución del script en CloudShell](img/script-ejecucion.png)
-![Web resultante del script](img/script-web.png)
+![Ejecución del script en CloudShell](img/16.png)
+![Web resultante del script](img/17.png)
 
 **Segunda ejecución**
 
@@ -243,19 +244,21 @@ aws ec2 delete-security-group --group-id $SG_ID
 
 **Prompts que me resultaron útiles** (resumidos):
 
-1. **Para la terminal de aws, región us-east-1, instancia libreria-vpc, dame el comando que sacar el ID de mi VPC y el de la subred libreria-publica.** 
-aws ec2 describe-vpcs --region us-east-1 \
-  --filters Name=tag:Name,Values=libreria-vpc \
-  --query "Vpcs[0].VpcId" --output text
+1. **Para la terminal de aws, región us-east-1, instancia libreria-vpc, dame el comando que sacar el ID de mi VPC y el de la subred libreria-publica.**
 
-aws ec2 describe-subnets --region us-east-1 \
-  --filters Name=tag:Name,Values=libreria-publica \
-  --query "Subnets[0].SubnetId" --output text
+   ```bash
+   aws ec2 describe-vpcs --region us-east-1 \
+     --filters Name=tag:Name,Values=libreria-vpc \
+     --query "Vpcs[0].VpcId" --output text
 
-**y ahora el comando para saber mi IP pública** 
-Aquí hay una trampa. Consúltala desde el navegador de tu ordenador, abriendo https://checkip.amazonaws.com, y no desde CloudShell. Si la pidieras en CloudShell, obtendrías la IP de CloudShell, y el SSH quedaría abierto para ella y no para tu equipo. Apunta la IP y añádele /32, por ejemplo 88.12.34.56/32.
+   aws ec2 describe-subnets --region us-east-1 \
+     --filters Name=tag:Name,Values=libreria-publica \
+     --query "Subnets[0].SubnetId" --output text
+   ```
 
+   **y ahora el comando para saber mi IP pública**
 
+   Aquí hay una trampa. Consúltala desde el navegador de tu ordenador, abriendo https://checkip.amazonaws.com, y no desde CloudShell. Si la pidieras en CloudShell, obtendrías la IP de CloudShell, y el SSH quedaría abierto para ella y no para tu equipo. Apunta la IP y añádele `/32`, por ejemplo `88.12.34.56/32`.
 
 **Errores o propuestas incorrectas que detecté**
 
